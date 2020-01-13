@@ -1,11 +1,10 @@
-package main
+package wavm
 
 /*
 #cgo LDFLAGS: -lWAVM
 #include <stdio.h>
 #include <stdlib.h>
 #include <wavm-c.h>
-
 typedef struct export_t
 {
 	const char* name;
@@ -14,10 +13,7 @@ typedef struct export_t
 } export_t;
 */
 import "C"
-
 import (
-	"io/ioutil"
-	"log"
 	"unsafe"
 )
 
@@ -37,22 +33,31 @@ const (
 
 // WASMEngineT is an alias for wasm_engine_t
 type WASMEngineT C.wasm_engine_t
+
 // WASMCompartmentT is an alias for wasm_compartment_t
 type WASMCompartmentT C.wasm_compartment_t
+
 // WASMStoreT is an alias for wasm_store_T
 type WASMStoreT C.wasm_store_t
+
 // WASMModuleT is an alias for wasm_module_t
 type WASMModuleT C.wasm_module_t
+
 // WASMInstanceT is an alias for wasm_instance_t
 type WASMInstanceT C.wasm_instance_t
+
 // WASMExternT is an alias for wasm_extern_t
 type WASMExternT C.wasm_extern_t
+
 // WASMTrapT is an alias for wasm_trap_t
 type WASMTrapT C.wasm_trap_t
+
 // WASMFuncT is an alias for wasm_trap_t
 type WASMFuncT C.wasm_func_t
+
 // WASMValT is an alias for wasm_val_t
 type WASMValT C.wasm_val_t
+
 // WASMExportT is an alias for wasm_export_t
 type WASMExportT C.wasm_export_t
 
@@ -129,7 +134,7 @@ func NewWASMStore(compartment *WASMCompartment, debugName string) *WASMStore {
 	}
 }
 
-// WASMModule wraps wasm_module_t and provides helpers for retrieving exports 
+// WASMModule wraps wasm_module_t and provides helpers for retrieving exports
 type WASMModule struct {
 	ptr *WASMModuleT
 }
@@ -263,44 +268,4 @@ func NewWASMInstance(store *WASMStore, module *WASMModule) *WASMInstance {
 func wasmExternTypeKind(ptr *WASMExternT) WASMExternKind {
 	kind := C.wasm_extern_kind((*C.wasm_extern_t)(ptr))
 	return WASMExternKind(kind)
-}
-
-func main() {
-	log.Print("Initializing WAVM")
-	engine := NewWASMEngine()
-	rawModule, err := ioutil.ReadFile("simple.wasm")
-	if err != nil {
-		panic(err)
-	}
-	compartment := NewWASMCompartment(engine, "")
-	store := NewWASMStore(compartment, "")
-	module := NewWASMModule(engine, rawModule)
-	instance := NewWASMInstance(store, module)
-
-	numExports := module.NumExports()
-	log.Printf("Found %d module exports.", numExports)
-
-	var fn *WASMFunction
-	for i := 0; i < numExports; i++ {
-		moduleExport := module.GetExport(i)
-		if moduleExport.Name != "sum" {
-			continue
-		}
-		instanceExport := instance.GetExport(i)
-		fn = instanceExport.AsFunction()
-	}
-
-	if fn == nil {
-		panic("sum function not found")
-	}
-
-	log.Print("Calling sum(2,2)")
-	ret := fn.Call(store, 2, 2)
-	log.Printf("Returns %d", ret)
-
-	module.Delete()
-	instance.Delete()
-	store.Delete()
-	compartment.Delete()
-	engine.Delete()
 }
