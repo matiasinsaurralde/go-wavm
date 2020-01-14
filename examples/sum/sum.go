@@ -13,11 +13,9 @@ const (
 )
 
 var (
-	engine      *wavm.WASMEngine
-	compartment *wavm.WASMCompartment
-	store       *wavm.WASMStore
-	module      *wavm.WASMModule
-	instance    *wavm.WASMInstance
+	engine            *wavm.WASMEngine
+	module            *wavm.WASMModule
+	instance          *wavm.WASMInstance
 
 	fn *wavm.WASMFunction
 
@@ -26,16 +24,14 @@ var (
 
 func init() {
 	log.Print("Initializing WAVM")
-	engine = wavm.NewWASMEngine()
+	engine = wavm.NewEngine(&wavm.Config{})
 	var err error
-	rawModule, err = ioutil.ReadFile(wasmFilename)
+	rawModule, err = ioutil.ReadFile("sum.wasm")
 	if err != nil {
 		panic(err)
 	}
-	compartment = wavm.NewWASMCompartment(engine, "")
-	store = wavm.NewWASMStore(compartment, "")
-	module = wavm.NewWASMModule(engine, rawModule)
-	instance = wavm.NewWASMInstance(store, module)
+	module = engine.LoadModule(rawModule, false)
+	instance = engine.NewInstance(module)
 
 	numExports := module.NumExports()
 	log.Printf("Found %d module exports.", numExports)
@@ -56,12 +52,10 @@ func init() {
 
 func main() {
 	log.Print("Calling sum(2,2)")
-	ret := fn.Call(store, 2, 2)
+	ret := fn.Call(2, 2)
 	log.Printf("Returns %d", ret)
 
 	module.Delete()
 	instance.Delete()
-	store.Delete()
-	compartment.Delete()
 	engine.Delete()
 }
